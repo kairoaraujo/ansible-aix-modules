@@ -167,9 +167,8 @@ class AIXHardware(Hardware):
                 for m in re.finditer(r'(\S+):\n.*FREE DISTRIBUTION(\n(\S+)\s+(\w+)\s+(\d+)\s+(\d+).*)+', out):
                     vgs_facts['vgs'][m.group(1)] = []
                     pp_size = 0
-		    # cmd is something like: "lsvg hdisk0", which is not correct.
-	   	    # Perhaps he meant "lspv_path"?
-		    # lvpv hdisk0 gives output like:
+		    # cmd is something like: "lspv hdisk0"
+		    # Output looks like:
 	  	    # PHYSICAL VOLUME:    hdisk0                   VOLUME GROUP:     rootvg
 		    # PV IDENTIFIER:      00083aaad8b3adad VG IDENTIFIER     00083daa0000d40000000126cbaaefac
 	  	    # PV STATE:           active
