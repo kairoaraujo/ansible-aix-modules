@@ -147,16 +147,39 @@ class AIXHardware(Hardware):
 
         vgs_facts = {}
         lsvg_path = self.module.get_bin_path("lsvg")
+        lspv_path = self.module.get_bin_path("lspv")
         xargs_path = self.module.get_bin_path("xargs")
+	# cmd is something like "lsvg -o | xargs lsvg -p"
+	# Output looks like:
+	# appvg:
+	# PV_NAME           PV STATE          TOTAL PPs   FREE PPs    FREE DISTRIBUTION
+	# hdisk2            active            319         0           00..00..00..00..00
+	# hdisk3            active            319         13          00..00..00..13..00
+	# rootvg:
+	# PV_NAME           PV STATE          TOTAL PPs   FREE PPs    FREE DISTRIBUTION
+	# hdisk0            active            199         0           00..00..00..00..00
+	# hdisk1            active            199         2           00..00..00..00..02
         cmd = "%s -o | %s %s -p" % (lsvg_path, xargs_path, lsvg_path)
-        if lsvg_path and xargs_path:
+        if lsvg_path and lspv_path and xargs_path:
             rc, out, err = self.module.run_command(cmd, use_unsafe_shell=True)
             if rc == 0 and out:
                 vgs_facts['vgs'] = {}
                 for m in re.finditer(r'(\S+):\n.*FREE DISTRIBUTION(\n(\S+)\s+(\w+)\s+(\d+)\s+(\d+).*)+', out):
                     vgs_facts['vgs'][m.group(1)] = []
                     pp_size = 0
-                    cmd = "%s %s" % (lsvg_path, m.group(1))
+		    # cmd is something like: "lspv -p hdisk0" (using xargs to iterate over all hdiskN devices)
+		    # Output for one device looks like:
+	  	    # PHYSICAL VOLUME:    hdisk0                   VOLUME GROUP:     rootvg
+		    # PV IDENTIFIER:      00083aaad8b3adad VG IDENTIFIER     00083daa0000d40000000126cbaaefac
+	  	    # PV STATE:           active
+		    # STALE PARTITIONS:   0                        ALLOCATABLE:      yes
+		    # PP SIZE:            128 megabyte(s)          LOGICAL VOLUMES:  9
+		    # TOTAL PPs:          199 (25472 megabytes)    VG DESCRIPTORS:   2
+		    # FREE PPs:           0 (0 megabytes)          HOT SPARE:        no
+		    # USED PPs:           199 (25472 megabytes)    MAX REQUEST:      256 kilobytes
+		    # FREE DISTRIBUTION:  00..00..00..00..00
+		    # USED DISTRIBUTION:  40..40..39..40..40
+                    cmd = "%s %s" % (lspv_path, m.group(1))
                     rc, out, err = self.module.run_command(cmd)
                     if rc == 0 and out:
                         pp_size = re.search(r'PP SIZE:\s+(\d+\s+\S+)', out).group(1)
