@@ -16,7 +16,19 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import sys
+import shlex
+import os
+import platform
 import re
+import itertools
+import commands
+import subprocess
+
+try:
+    import json
+except ImportError:
+    import simplejson as json
 
 from ansible.module_utils.facts.hardware.base import Hardware, HardwareCollector
 
@@ -34,6 +46,7 @@ class AIXHardware(Hardware):
     """
     platform = 'AIX'
 
+
     def populate(self, collected_facts=None):
         hardware_facts = {}
 
@@ -43,6 +56,9 @@ class AIXHardware(Hardware):
         vgs_facts = self.get_vgs_facts()
         mount_facts = self.get_mount_facts()
         devices_facts = self.get_device_facts()
+        oslevel_facts = self.get_oslevel_facts()
+        get_niminfo = self.get_niminfo()
+        get_uname = self.get_uname()
 
         hardware_facts.update(cpu_facts)
         hardware_facts.update(memory_facts)
@@ -50,6 +66,9 @@ class AIXHardware(Hardware):
         hardware_facts.update(vgs_facts)
         hardware_facts.update(mount_facts)
         hardware_facts.update(devices_facts)
+        hardware_facts.update(oslevel_facts)
+        hardware_facts.update(get_niminfo)
+        hardware_facts.update(get_uname)
 
         return hardware_facts
 
@@ -235,6 +254,89 @@ class AIXHardware(Hardware):
 
         return device_facts
 
+    def get_oslevel_facts(self):
+        oslevel_facts = {}
+        """
+        get the oslevel function delivers oslevel -s output
+        <OS Ver>-<TL>-<SP>-<BUILD DATE>
+        as well OS_Version, the technology level, TL, the Servicepack, SP and the BUILD_DATE,
+        """
+        rc, out, err = self.module.run_command(["/usr/bin/oslevel", "-s"])
+        if rc != 0:
+            self.module.fail_json(msg="could not determine oslevel", rc=rc, err=err)
+        oslevel_facts = {'oslevel_s': out.strip('\n')}
+        keys = ('OS_Ver', 'TL', 'SP', 'BUILD_DATE')
+        values = out.split('-')
+        v_stript = [v.rstrip('0\n') for v in values]
+        adict = dict(itertools.izip(keys, v_stript))
+        oslevel_facts.update(adict)
+
+        return oslevel_facts
+
+
+    def get_niminfo(self):
+        file = '/etc/niminfo'
+
+        try:
+            if os.path.exists(file):
+                '''
+                The next line will do 3 things
+                It opens the file and reads all lines containing the string 'export'
+                ((l for l in open(file, 'r') if l.startswith('export')))
+                it puts the output in line, and if line is not empty, if not re.match(r'^\s*$',line)
+                then it splits that line into 2 blocks showing only the second and
+                splits this into 2 block with '=' as separator:
+                line.split(' ', 1)[1].split('=')
+                the output is put into k anv v
+                than it strips k and v and creates a dictionary from these:
+                dict((k.strip(), v.strip(' "\n'))
+                '''
+                niminfo = dict(
+                    (k.strip(), v.strip(' "\n')) for k, v in (
+                        line.split(
+                            ' ', 1)[1].split(
+                            '=', 1) for line in (
+                            (l for l in open(
+                                file, 'r') if l.startswith('export'))) if not re.match(
+                                r'^\s*$', line)))
+        except IOError as e:
+            #       module.fail_json(msg="could not read /etc/niminfo", rc=rc, err=e)
+            self.module.warnings.append('could not read /etc/niminfo')
+            niminfo = {}
+        return niminfo
+
+    def get_uname(self):
+        options = {
+            "systemid": "-F",
+            "lannumber": "-l",
+            "lpar": "-L",
+            "id": "-m",
+            "model": "-M",
+            "name": "-n",
+            "architecture": "-p",
+            "release": "-r",
+            "os": "-s",
+            "serial": "-u",
+            "version": "-v",
+        } 
+        ulist = {}
+        for key in options:
+            rc, out, err = self.module.run_command(["/usr/bin/uname", options[key]])
+            if rc != 0:
+                warning = "failed to execute uname %s" % options[key]
+                self.module.warnings.append(warning)
+                attribute_dict = {}
+            else:
+                if key == "lpar":
+                    ulist["lparid"] = out.strip().split()[0]
+                    ulist["lparname"] = out.strip().split()[1]
+                elif key == "model":
+                    ulist["model"] = out.strip().split(",")[1]
+                elif key == "serial":
+                    ulist["serial"] = out.strip().split(",")[1]
+                else:
+                    ulist[key] = out.strip()
+        return ulist
 
 class AIXHardwareCollector(HardwareCollector):
     _platform = 'AIX'
