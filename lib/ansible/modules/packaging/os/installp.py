@@ -32,7 +32,7 @@ options:
     choices: [ 'yes', 'no' ]
     required: false
     default: no
-  install_prereqs: 
+  install_prereqs:
     description:
       - Install pre-requisite software automatically
     choices: ['yes', 'no' ]
