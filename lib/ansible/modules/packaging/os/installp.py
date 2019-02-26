@@ -149,7 +149,7 @@ def _check_new_pkg(module, package, repository_path):
             msg="Repository path %s is not valid." % repository_path)
 
 
-def _check_installed_pkg(module, package, repository_path, min_version):
+def _check_installed_pkg(module, package, repository_path, min_version='0.0'):
     """
     Check the package on AIX.
     It verifies if the package is installed and informations
