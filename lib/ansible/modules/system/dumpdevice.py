@@ -1,5 +1,50 @@
 #!/usr/bin/python
 
+from __future__ import absolute_import, division, print_function
+
+__metaclass__ = type
+
+ANSIBLE_METADATA = {
+    'metadata_version': '1.1',
+    'status': ['preview'],
+    'supported_by': 'community'
+}
+
+DOCUMENTATION = '''
+---
+author: Vasiliy Gokoyev (@k3it)
+module: dumpdevice
+short_description: Checks and expands AIX dump device
+description:
+  - Set the largest dump device to equal or greater than the estimated dump size.  check_mode is supported
+version_added: "2.7"
+options:
+  ratio:
+    description:
+      - If the largest dump device is too small set dump device to at least ratio x estimated dump size.
+    required: false
+    default: 1.0
+''' 
+
+EXAMPLES = '''
+- name: Expand the largerst AIX dump device to at least 1.1 x estimated dump size
+  dumpdevice:
+    ratio: 1.1
+'''
+
+RETURN = '''
+changed:
+  description: Return true if the dump device was expanded
+  returned: always
+  type: boolean
+  version_added: 2.7
+msg:
+  description: Return message regarding the state of the dump device.
+  returned: always
+  type: string
+  version_added: 2.7
+'''
+
 from ansible.module_utils.basic import *
 
 import subprocess 

@@ -75,11 +75,12 @@ EXAMPLES = '''
     package_license: yes
     state: present
 
-- name: Install bos.sysmgt.nim.master only
+- name: Install bos.sysmgt.nim.master and its pre-requisite filesets
   installp:
     name: bos.sysmgt.nim.master
     repository_path: /repository/AIX71/installp/base
     package_license: yes
+    install_prereqs: yes
     state: present
 
 - name: Install bos.sysmgt.nim.master and bos.sysmgt.nim.spot

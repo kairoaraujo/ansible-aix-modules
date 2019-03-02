@@ -1,26 +1,65 @@
 #!/usr/bin/python
 
+from __future__ import absolute_import, division, print_function
+
+__metaclass__ = type
+
+ANSIBLE_METADATA = {
+    'metadata_version': '1.1',
+    'status': ['preview'],
+    'supported_by': 'community'
+}
+
+DOCUMENTATION = '''
+---
+author: Vasiliy Gokoyev (@k3it)
+module: emgr
+short_description: Installs or removes AIX IFIX packages
+description:
+  - Manage AIX emergency fixes (ifix).  check_mode is supported
+version_added: "2.7"
+options:
+  package:
+    description:
+      - full path to location of the ifix .Z package. Required for state 'present'
+  label:
+    description:
+      - IFIX label as reported by /usr/sbin/emgr -l.  Required for state 'absent'
+  state:
+    description:
+      - State of the IFIX
+    choices: ["present", "absent"]
+    default: "present"
+''' 
+
+EXAMPLES = '''
+- name: Install xorgs ifix /foo/bar/xorg_fix3/IJ11544s0a.181127.epkg.Z
+  emgr:
+    package: /foo/bar/xorg_fix3/IJ11544s0a.181127.epkg.Z
+    state: present
+
+- name: Remove ifix with label IJ11544s0a
+  emgr:
+    label: IJ11544s0a
+    state: absent
+'''
+
+RETURN = '''
+changed:
+  description: Return changed for the IFIX state as true or false.
+  returned: always
+  type: boolean
+  version_added: 2.7
+msg:
+  description: Return message regarding the action.
+  returned: always
+  type: string
+  version_added: 2.7
+'''
+
 from ansible.module_utils.basic import *
 
 import os, subprocess, re
-
-# AIX emgr ansible module with support for --check mode
-# Author: Vasiliy Gokoyev
-# 
-# Examples:
-#
-#
-#  - name: Install xorgs ifix /foo/bar/xorg_fix3/IJ11544s0a.181127.epkg.Z
-#    emgr:
-#      package: /foo/bar/xorg_fix3/IJ11544s0a.181127.epkg.Z
-#      state: present
-#
-#  - name: Remove ifix with label IJ11544s0a
-#    emgr:
-#      label: IJ11544s0a
-#      state: absent
-# 
-
 
 def main():
 	
